@@ -1,14 +1,15 @@
 # Vyasan Valavil
-# This script will read a LogFile created by OpenECU and convert them into a Pandas Data Frame
+# This script will read a LogFile (Flash1.csv) created by OpenECU and convert them into a Pandas Data Frame
+# It will also process it save it as another csv called hexdata1.csv
 
 # Going to Have to Import the Following addons
 import pandas as pd
 pd.options.mode.chained_assignment = None  # default='warn'
-import os
+#import os
 import glob
 
 #your csv file here:
-csvfile = 'Flash4.csv'
+csvfile = 'Flash1.csv'
 
 #Here we grab 26 columns
 my_cols = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
@@ -53,7 +54,7 @@ senddf = senddf.reset_index(drop=True)
 
 print(senddf)
 
-savefilename = 'hexdata4.csv'
+savefilename = 'hexdata1.csv'
 senddf.to_csv(savefilename, index=False)
 
 exit()
