@@ -15,8 +15,10 @@ matrix = cv2.getPerspectiveTransform(pts1, pts2)
 #and this is what we get after transforming
 output = cv2.warpPerspective(img, matrix, (w, h))
 
-#for x in range(0,4):
-    #cv2.circle(img, (pts1[x][0], pts1[x][1]), 5., (0,0,255.), cv2.FILLED)
+print(pts1[0][0])
+
+for x in range(0,4):
+    cv2.circle(img, (int(pts1[x][0]), int(pts1[x][1])), 5, (0,0,255.), cv2.FILLED)
 
 cv2.imshow("Original Image ", img)
 cv2.imshow("Output Image", output)
