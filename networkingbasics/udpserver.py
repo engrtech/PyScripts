@@ -12,6 +12,7 @@ udp_port = 12345			                # specified port to connect
 
 sock.bind((udp_host,udp_port))
 
+#This while loop keeps listening for UDP packets aimed at it.
 while True:
 	print("Waiting for client...")
 	data,addr = sock.recvfrom(1024)	        #receive data from client

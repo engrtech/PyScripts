@@ -13,9 +13,11 @@ import time
 import threading
 
 #function definitions
+
+#this definition takes in user-input returns the hex
 def processuds(input):
-    input = str(input).replace(" ", "").lower()
-    b_len = int(len(input)/2)
+    input = str(input).replace(" ", "").lower() #remove spaces
+    b_len = int(len(input)/2)   #standardize the number of digits to 14
     if len(input) < 14:
         for x in range(14-len(input)):
             input = input + '0'
