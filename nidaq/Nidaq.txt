@@ -1,0 +1,6 @@
+Used a USB-6008 for the USI Over-voltage tester. User-guide is included in this repository.
+
+Dev1 is used as default, but this can be changed as needed.
+
+Multiple samples are needed for AI and DI.
+Currently using the max() function in python, but might need to test this for values when all the AI and DI samples are different.

@@ -10,20 +10,22 @@ import binascii
 # open the channels call on the openChannel method inside of canlib and, as an
 # input put in channel=0 and channel=1. Where 0 and 1 represents the two
 # CANlib channels 0 and 1.
+#LETS USE VIRTUAL CHANNELS INSTEAD
 ch_a = canlib.openChannel(channel=0)
-#ch_b = canlib.openChannel(channel=1)
+ch_b = canlib.openChannel(channel=1)
 
 # After opening the channel, we need to set the bus parameters. Some
 # interfaces keep their params from previous programs. This can cause problems
 # if the params are different between the interfaces/channels. For now we will
 # use setBusParams() to set the canBitrate to 250K.
+#AT DATA WE USE 500K
 ch_a.setBusParams(canlib.canBITRATE_500K)
-#ch_b.setBusParams(canlib.canBITRATE_250K)
+ch_b.setBusParams(canlib.canBITRATE_500K)
 
 # The next step is to Activate the CAN chip for each channel (ch_a and ch_b in
 # this example) use .busOn() to make them ready to receive and send messages.
 ch_a.busOn()
-#ch_b.busOn()
+ch_b.busOn()
 
 # To transmit a message with (11-bit) CAN id = 123 and contents (decimal) 72,
 # 69, 76, 76, 79, 33, first create the CANFrame (CANmessage) and name it. In
@@ -40,6 +42,7 @@ ch_a.write(frame)
 # longer the program will encounter a timeout error. read the CANFrame by calling
 # .read() on the channel that receives the message, ch_b in this example. To
 # then read the message we will use print() and send msg as the input.
+
 msg = ch_a.read(timeout=5)
 print("Read from A:")
 print((binascii.hexlify(msg.data)))
