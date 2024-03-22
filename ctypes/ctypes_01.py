@@ -1,4 +1,6 @@
-#create a library. #python doesn't have pointers.
+#Vyasan Valavil
+#03-21-2024
+#create a DLL using VS. #python doesn't have pointers.
 #We are mostly working with STRINGS in this script
 
 import ctypes
@@ -7,8 +9,10 @@ import ctypes
 path = 'C:/CFiles/ctypes_tutorial/x64/Debug/ctypes_tutorial.dll'
 clibrary = ctypes.CDLL(path)
 
-clibrary.test()
+#this is how a function from the dll is called:
+clibrary.test() #this is just a "hello world" function.
 
+#you can just rename a function like this for simplicity
 add = clibrary.add
 
 #use the function without defining function parameters
@@ -26,6 +30,7 @@ print(add(1,4))
 #strings are immutable...
 
 #sending just the string to a char * str will print out just 'J'
+#display contains a printf statement.
 clibrary.display("John")
 
 #so you need to convert it with a b"   " for BINARY
@@ -43,10 +48,10 @@ clibrary.display(last_name.encode())
 #NOTE : we are not using the display function,
 #we are just printing it here after sending it through a function...
 string = "Hello"
-print("Before: ", string)
+print("Before:", string)
 clibrary.increment(string)
 #you will see that it has not been incremented
-print("After: ", string)
+print("After:", string)
 
 #to make string 'C-ready' send the pointer!!! cstring...
 cstring = ctypes.c_char_p(b"Hello")

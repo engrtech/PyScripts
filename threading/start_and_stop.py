@@ -46,7 +46,7 @@ task2.start()
 time.sleep(5)
 
 print("Third thread is also starting...")
-# Start the task for a third time so the second and third instance are both running.
+# Start the task for a third time so the second and third instances running simultaneously.
 task3 = StoppableTask('Third')
 task3.start()
 time.sleep(3)
