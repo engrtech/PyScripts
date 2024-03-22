@@ -1,0 +1,5 @@
+Following the user guide for ESL Token Generation here:
+https://dev.azure.com/danaelectrification/Picard/_git/subC_SW_Platform_PXROS?path=%2Fdoc_user%2Fcontents%2FCybersecurity%20service%20%2427-%20User%20Manual.docx
+
+There is one known error in this guide:
+- Make_dll.bat has been replaced by mk_token_dll.msvc.bat. This .bat must be executed from a visual studio command prompt.
