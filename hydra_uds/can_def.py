@@ -1,6 +1,7 @@
 import binascii
 import subprocess
 import time
+import numpy as np
 
 def disp_uds(frame):
     # only converts frame to a readable format takes in entire frame (id and data)
@@ -17,17 +18,17 @@ def disp_uds(frame):
 
 def strhex2uds(input):
     #create functions to convert a string to the data component in a Frame
-    output_ba = bytearray.fromhex(input)
+    output_ba = bytearray.fromhex(input) #string to byearray
     lop = len(output_ba)
     if lop <= 7:
-        return strhex2uds_sf(bytes(output_ba))
+        return strhex2uds_sf(bytes(output_ba)) #bytearray to bytes
     else:
         return strhex2uds_mf(bytes(output_ba), lop)
 
 def strhex2uds_sf(bytes):
     #this will be called if message is LESS than 7 bytes
     blen = bytearray(len(bytes).to_bytes(1, 'big'))
-    seven_byte = pad_bytearray(bytes, 7)
+    seven_byte = pad_bytearray(bytes, 7) #UDS blocksize is 7
     single_frame = blen + seven_byte
     return single_frame, 0
 
@@ -50,8 +51,8 @@ def strhex2uds_mf(bytes, lop):
         cf_id = bytearray(fb.to_bytes(1, 'big'))
         mf.append(cf_id+cf)
     return mf, 1
-def pad_bytearray(b_array, block_size, padding_byte=0):
-    padding_needed = (block_size - len(b_array)) % block_size
+def pad_bytearray(b_array, block_size, padding_byte=0): #byte arrays are mutable
+    padding_needed = (block_size - len(b_array)) % block_size #not sure why there is a mod here...
     if padding_needed == 0:
         return b_array  # No padding needed
     padding = bytearray([padding_byte] * padding_needed)
@@ -140,3 +141,7 @@ def mimic_prog(py32bit, script_path, time):
         return msg
     except subprocess.CalledProcessError as e:
         print(f"An error occurred while trying to run the script: {e}")
+
+def cutarray(array, a, b):
+    #accepts an array and returns only select elements...
+    return array[a:b]

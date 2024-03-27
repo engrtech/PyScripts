@@ -3,6 +3,9 @@ import can_def
 import threading
 import time
 
+did = 0x18da5ff9
+tid = 0x18daf95f
+
 # The path to the Python interpreter you want to use token_dll may require 32-bit Python
 py32bit = 'C:/SVN/LaForge/Tools/Hydra_UDS/Scripts/venv/Scripts/python.exe'
 # The path to your 32
@@ -16,14 +19,16 @@ def tx_uds(framedata, mf):
         tx_mf_uds(framedata)
 
 def tx_sf_uds(framedata):
-    frame = Frame(id_=0x7E0, data=framedata, flags=canlib.MessageFlag.STD)
+    global did
+    frame = Frame(id_=did, data=framedata, flags=canlib.MessageFlag.FDF | canlib.MessageFlag.BRS | canlib.MessageFlag.EXT)
     ch_a.write(frame)
     can_def.disp_uds(frame)
 
 def tx_mf_uds(framedata): #framedata here comes as a list...
+    global did
     # send first frame
     print("sending out large frame")
-    frame = Frame(id_=0x7E0, data=framedata[0], flags=canlib.MessageFlag.STD)
+    frame = Frame(id_=did, data=framedata[0], flags=canlib.MessageFlag.FDF | canlib.MessageFlag.BRS | canlib.MessageFlag.EXT)
     ch_a.write(frame)
     can_def.disp_uds(frame)
     time.sleep(.002)
@@ -33,8 +38,8 @@ def tx_mf_uds(framedata): #framedata here comes as a list...
     #print("send signal confirmed: ", conf, st)
     if conf: #Was the first byte 30?
         for x in range(len(framedata) - 1):
-            time.sleep(.0005)  # separation time
-            frame = Frame(id_=0x7E0, data=framedata[x + 1], flags=canlib.MessageFlag.STD)
+            time.sleep(st)  # separation time
+            frame = Frame(id_=did, data=framedata[x + 1], flags=canlib.MessageFlag.FDF | canlib.MessageFlag.BRS | canlib.MessageFlag.EXT)
             can_def.disp_uds(frame)
             ch_a.write(frame)
     time.sleep(.002)
@@ -44,7 +49,7 @@ def tx_rec_cf(st):
     send = bytearray(8)
     send[0] = 48
     send[1] = st
-    frame = Frame(id_=0x7E0, data=send, flags=canlib.MessageFlag.STD)
+    frame = Frame(id_=did, data=send, flags=canlib.MessageFlag.FDF | canlib.MessageFlag.BRS | canlib.MessageFlag.EXT)
     can_def.disp_uds(frame)
     ch_a.write(frame)
 
@@ -54,8 +59,9 @@ def rx_uds():
         try:
             recd = ch_a.read(timeout=60000)
             global last_recd
-            last_recd = recd
-            proc_uds_recd(recd)
+            if recd.id == 0x18daf95f:
+                proc_uds_recd(recd)
+                last_recd = recd
         except:
             print("no longer reading messages")
     print("rx_uds thread is stopped")
@@ -164,12 +170,16 @@ def unlock_using_token_dll():
     del large_frame[:]
 
 
-last_rec = Frame(id_=0x7E0, data=bytearray((0).to_bytes(8, 'big')), flags=canlib.MessageFlag.STD)
+
+last_rec = Frame(id_=did, data=bytearray((0).to_bytes(8, 'big')), flags=canlib.MessageFlag.FDF | canlib.MessageFlag.BRS | canlib.MessageFlag.EXT)
 
 # open channel (only 1 channel on the kvaser)
-ch_a = canlib.openChannel(channel=0)
-# set bus parameters
-ch_a.setBusParams(canlib.canBITRATE_500K)
+ch_a = canlib.openChannel(
+    channel=0,
+    flags=canlib.Open.CAN_FD,
+    bitrate=canlib.BitrateFD.BITRATE_500K_80P,
+    data_bitrate=canlib.BitrateFD.BITRATE_2M_80P,
+)
 # activate CAN chip
 ch_a.busOn()
 
@@ -183,18 +193,17 @@ tp1.start()
 ############################################################################
 #####################FIRST SEQUENCE STARTS HERE ############################
 ############################################################################
-time.sleep(1)
-quick_tx('1001')
-time.sleep(1)
+time.sleep(.5)
 quick_tx('1003')
-time.sleep(1)
-quick_tx('1002')
-time.sleep(1)
+time.sleep(.5)
+
+#unlock unit
 print("pause tester present signal")
 tp1.stop()
 tp1.join()
-
 unlock_using_token_dll()
+
+time.sleep(.5)
 
 print("\nresume tester present signal")
 tp2 = TP_send(1)
@@ -213,6 +222,8 @@ time.sleep(1)
 print("pause tester present signal")
 tp2.stop()
 tp2.join()
+
+time.sleep(1)
 
 unlock_using_token_dll()
 

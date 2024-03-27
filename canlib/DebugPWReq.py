@@ -2,6 +2,12 @@ from canlib import canlib, Frame
 import can_def
 import threading
 import time
+import pandas as pd
+import glob
+import os
+
+did = 0x18da5ff9
+tid = 0x18daf95f
 
 # The path to the Python interpreter you want to use token_dll may require 32-bit Python
 py32bit = 'C:/SVN/LaForge/Tools/Hydra_UDS/Scripts/venv/Scripts/python.exe'
@@ -16,16 +22,24 @@ def tx_uds(framedata, mf):
         tx_mf_uds(framedata)
 
 def tx_sf_uds(framedata):
-    frame = Frame(id_=0x7E0, data=framedata, flags=canlib.MessageFlag.STD)
+    global did
+    frame = Frame(id_=did, data=framedata, flags=canlib.MessageFlag.FDF | canlib.MessageFlag.BRS | canlib.MessageFlag.EXT)
     ch_a.write(frame)
-    can_def.disp_uds(frame)
+    sent_msg = can_def.disp_uds(frame)
+    global df
+    dflog = 'Tx : ' + sent_msg
+    df.loc[len(df.index)] = dflog
 
 def tx_mf_uds(framedata): #framedata here comes as a list...
+    global did
     # send first frame
     print("sending out large frame")
-    frame = Frame(id_=0x7E0, data=framedata[0], flags=canlib.MessageFlag.STD)
+    frame = Frame(id_=did, data=framedata[0], flags=canlib.MessageFlag.FDF | canlib.MessageFlag.BRS | canlib.MessageFlag.EXT)
     ch_a.write(frame)
-    can_def.disp_uds(frame)
+    sent_msg = can_def.disp_uds(frame)
+    global df
+    dflog = 'Tx : ' + sent_msg
+    df.loc[len(df.index)] = dflog
     time.sleep(.002)
     # now check the response
     conf, st = can_def.chk_resp(last_recd)
@@ -33,9 +47,12 @@ def tx_mf_uds(framedata): #framedata here comes as a list...
     #print("send signal confirmed: ", conf, st)
     if conf: #Was the first byte 30?
         for x in range(len(framedata) - 1):
-            time.sleep(.0005)  # separation time
-            frame = Frame(id_=0x7E0, data=framedata[x + 1], flags=canlib.MessageFlag.STD)
-            can_def.disp_uds(frame)
+            time.sleep(st)  # separation time
+            frame = Frame(id_=did, data=framedata[x + 1], flags=canlib.MessageFlag.FDF | canlib.MessageFlag.BRS | canlib.MessageFlag.EXT)
+            sent_msg = can_def.disp_uds(frame)
+            dflog = 'Tx : ' + sent_msg
+            df.loc[len(df.index)] = dflog
+            time.sleep(.002)
             ch_a.write(frame)
     time.sleep(.002)
 
@@ -44,8 +61,11 @@ def tx_rec_cf(st):
     send = bytearray(8)
     send[0] = 48
     send[1] = st
-    frame = Frame(id_=0x7E0, data=send, flags=canlib.MessageFlag.STD)
-    can_def.disp_uds(frame)
+    frame = Frame(id_=did, data=send, flags=canlib.MessageFlag.FDF | canlib.MessageFlag.BRS | canlib.MessageFlag.EXT)
+    sent_msg = can_def.disp_uds(frame)
+    global df
+    dflog = 'Tx : ' + sent_msg
+    df.loc[len(df.index)] = dflog
     ch_a.write(frame)
 
 def rx_uds():
@@ -54,8 +74,13 @@ def rx_uds():
         try:
             recd = ch_a.read(timeout=60000)
             global last_recd
-            last_recd = recd
-            proc_uds_recd(recd)
+            if recd.id == 0x18daf95f:
+                proc_uds_recd(recd) #if flow control needs to be implemented
+                last_recd = recd
+                recd_msg = can_def.disp_uds(recd)
+                global df
+                dflog = 'Rx : ' + recd_msg
+                df.loc[len(df.index)] = dflog
         except:
             print("no longer reading messages")
     print("rx_uds thread is stopped")
@@ -87,8 +112,6 @@ def proc_uds_recd(recd):
 
 def quick_tx(msg):
 # will process the string and convert it to the data frame and
-    while hold_tx:
-        time.sleep(1)
     framedata, mf = can_def.strhex2uds(msg)
     tx_uds(framedata, mf)
     time.sleep(.01)
@@ -118,8 +141,6 @@ def set_multi_frame(int):
     multi_frame = int
     set_cf_count(int)
 
-hold_tx = False
-
 cf_count = 0
 def set_cf_count(int):
     global cf_count    # Needed to modify global copy of globvar
@@ -146,7 +167,7 @@ def append_large_frame(frame):
         #print("frame#", x, ": ", (binascii.hexlify(large_frame[x].data)).decode())
 
 def unlock_using_token_dll():
-    global large_frame, last_rec
+    global large_frame, last_rec, df
     print("requesting seed")
     quick_tx('2761')
     # a large frame tupple should have been created...
@@ -163,13 +184,36 @@ def unlock_using_token_dll():
     set_pl_count(0)
     del large_frame[:]
 
+def pw_req():
+    global large_frame, last_rec, df
+    print("requesting pw")
+    quick_tx('22f13d')
+    # a large frame tupple should have been created...
+    time.sleep(.050)  # need this to process the frame
+    pw = can_def.proc_pw(large_frame, cf_count_proc, pl_count)
+    print(pw[0])
+    len_of_df = df.shape[0]
+    df.iat[len_of_df-1, 0] = df.iat[len_of_df-1, 0] + ' ' + pw[0]
+    time.sleep(.5)
+    # reset everything incase this is looped:
+    set_multi_frame(0)
+    set_pl_count(0)
+    del large_frame[:]
 
-last_rec = Frame(id_=0x7E0, data=bytearray((0).to_bytes(8, 'big')), flags=canlib.MessageFlag.STD)
+#SCRIPT STARTS HERE
+
+column_names = ['Messages']
+df = pd.DataFrame(columns = column_names)
+
+last_rec = Frame(id_=did, data=bytearray((0).to_bytes(8, 'big')), flags=canlib.MessageFlag.FDF | canlib.MessageFlag.BRS | canlib.MessageFlag.EXT)
 
 # open channel (only 1 channel on the kvaser)
-ch_a = canlib.openChannel(channel=0)
-# set bus parameters
-ch_a.setBusParams(canlib.canBITRATE_500K)
+ch_a = canlib.openChannel(
+    channel=0,
+    flags=canlib.Open.CAN_FD,
+    bitrate=canlib.BitrateFD.BITRATE_500K_80P,
+    data_bitrate=canlib.BitrateFD.BITRATE_2M_80P,
+)
 # activate CAN chip
 ch_a.busOn()
 
@@ -183,18 +227,17 @@ tp1.start()
 ############################################################################
 #####################FIRST SEQUENCE STARTS HERE ############################
 ############################################################################
-time.sleep(1)
-quick_tx('1001')
-time.sleep(1)
+time.sleep(.5)
 quick_tx('1003')
-time.sleep(1)
-quick_tx('1002')
-time.sleep(1)
+time.sleep(.5)
+
+#unlock unit
 print("pause tester present signal")
 tp1.stop()
 tp1.join()
-
 unlock_using_token_dll()
+
+time.sleep(.5)
 
 print("\nresume tester present signal")
 tp2 = TP_send(1)
@@ -203,11 +246,7 @@ tp2.start()
 ############################################################################
 ################### SECOND SEQUENCE STARTS HERE ############################
 ############################################################################
-time.sleep(1)
-quick_tx('1001')
-time.sleep(1)
-quick_tx('1003')
-time.sleep(1)
+time.sleep(.1)
 quick_tx('1002')
 time.sleep(1)
 print("pause tester present signal")
@@ -216,9 +255,9 @@ tp2.join()
 
 unlock_using_token_dll()
 
-print("\nresume tester present signal")
-tp3 = TP_send(1)
-tp3.start()
+time.sleep(.5)
+
+pw_req()
 
 ch_a.busOff()
 # close channel
@@ -227,8 +266,27 @@ ch_a.close()
 end_rx.set()
 rx.join()
 
-print("no longer sending tp")
-tp3.stop()
-tp3.join()
+############################################################################
+####################### PROCESS DATA FRAME HERE ############################
+############################################################################
+projdirectory = os.path.dirname(os.path.realpath(__file__))
+#process the df and get ready to write to file:
+tocsvdf = df['Messages'].str.split(" ", n=4, expand=True)
+col_names = {0: 'Rx/Tx', 1: ':', 2: 'ID', 3: 'Hex', 4: 'Desc'}
+print(tocsvdf)
+tocsvdf.rename(columns=col_names, inplace=True)
+
+#get serial number from log file that you will add to
+currentdir = projdirectory + '/Current'
+file = glob.glob(os.path.join(currentdir, "*.csv"))[0]
+filename = file.split("\\")[-1]
+sn = filename.split(".")[0]
+fromcsvdf = pd.read_csv(file, dtype={'ID': 'str'})
+fromcsvdf = fromcsvdf.drop(fromcsvdf.columns[[0]], axis=1)
+
+#now concatenate and overwrite
+newdf = pd.concat([fromcsvdf, tocsvdf])
+newdf.reset_index(drop=True, inplace=True)
+newdf.to_csv(f'{currentdir}/{sn}.csv')
 
 exit()
