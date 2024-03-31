@@ -22,7 +22,7 @@ def getContours(img, imgContour):
             x, y, w, h = cv2.boundingRect(approx) #capture the corners
             cv2.rectangle(imgContour, (x,y), (x+w, y+h), (0,255,0), 5) #draw the rect boundingbox
             cv2.putText(imgContour, "Points: " + str(len(approx)), (x+w+20, y+20), cv2.FONT_HERSHEY_COMPLEX, .7, (0, 255, 0), 2)
-            cv2.putText(imgContour, "Points: " + str(int(area)), (x + w + 20, y + 45), cv2.FONT_HERSHEY_COMPLEX, .7,
+            cv2.putText(imgContour, "Area: " + str(int(area)), (x + w + 20, y + 45), cv2.FONT_HERSHEY_COMPLEX, .7,
                         (0, 255, 0), 2)
 
 
