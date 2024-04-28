@@ -53,6 +53,7 @@ time.sleep(3)
 
 # Now only end the third thread.
 print("Third thread is ending\n")
+time.sleep(.001)
 task3.stop()
 task3.join()
 
