@@ -13,7 +13,7 @@ csvfile = 'Flash1.csv'
 
 #Here we grab 26 columns
 my_cols = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"]
-rawdf = pd.read_csv(csvfile, names=my_cols, engine='python', skiprows = 3)
+rawdf = pd.read_csv(csvfile, names=my_cols, engine='python', skiprows=3) #we want to ignore the firs three lines of the csv
 
 #Now assign new names for the columns and run the for loop that will rename them.
 orig    = ["B",     "D",    "E",    "G",    "H",    "I",    "J",    "K",    "L",    "M",    "N",    "O"]
