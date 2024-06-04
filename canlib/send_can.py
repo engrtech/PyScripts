@@ -4,35 +4,21 @@
 from canlib import canlib, Frame
 import binascii
 
-# Firstly, open two CAN channels, one to send the message and one to receive.
-# Note that there needs to be a channel to receive, as otherwise the message
-# can not be sent. In this example the channels are named ch_a and ch_b. To
-# open the channels call on the openChannel method inside of canlib and, as an
-# input put in channel=0 and channel=1. Where 0 and 1 represents the two
-# CANlib channels 0 and 1.
-#LETS USE VIRTUAL CHANNELS INSTEAD
+
 ch_a = canlib.openChannel(channel=0)
-ch_b = canlib.openChannel(channel=1)
 
 # After opening the channel, we need to set the bus parameters. Some
 # interfaces keep their params from previous programs. This can cause problems
 # if the params are different between the interfaces/channels. For now we will
 # use setBusParams() to set the canBitrate to 250K.
-#AT DATA WE USE 500K
+#AT DANA WE USE 500K
 ch_a.setBusParams(canlib.canBITRATE_500K)
-ch_b.setBusParams(canlib.canBITRATE_500K)
 
-# The next step is to Activate the CAN chip for each channel (ch_a and ch_b in
-# this example) use .busOn() to make them ready to receive and send messages.
+# The next step is to Activate the CAN chip for each channel
 ch_a.busOn()
-ch_b.busOn()
 
-# To transmit a message with (11-bit) CAN id = 123 and contents (decimal) 72,
-# 69, 76, 76, 79, 33, first create the CANFrame (CANmessage) and name it. In
-# this example, the CANFrame is named frame. Then send the message by calling on
-# the channel that will act as the sender and use .write() with the CANFrame
-# as input. In this example ch_a will act as sender.
-frame = Frame(id_=0x7E0, data=[0x02,0x3e,0x00,0x00,0x00,0x00,0x00,0x00], flags=canlib.MessageFlag.STD )
+frame = Frame(id_=0x7E0, data=[0x02,0x3e,0x00,0x00,0x00,0x00,0x00,0x00], flags=canlib.MessageFlag.STD)
+
 print("Written to A:")
 print((binascii.hexlify(frame.data)))
 ch_a.write(frame)
@@ -50,11 +36,9 @@ print((binascii.hexlify(msg.data)))
 # After the message has been sent, received and read it is time to inactivate
 # the CAN chip. To do this call .busOff() on both channels that went .busOn()
 ch_a.busOff()
-#ch_b.busOff()
 
 # Lastly, close all channels with close() to finish up.
 ch_a.close()
-#ch_b.close()
 
 # Depending on the situation it is not always necessary or preferable to go of
 # the bus with the channels and, instead only use close(). But this will be
