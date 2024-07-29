@@ -4,6 +4,7 @@ import binascii
 import candef
 import threading
 import pandas as pd
+import sys
 
 kvaser_channel = 0
 
@@ -20,10 +21,10 @@ def rx_uds():
             recd = ch_a.read(timeout=5000)
             if recd.id == tid: #We only care about specific IDs
                 recmsg = ((binascii.hexlify(recd.data)).decode())
-                df.loc[len(df.index)] = f'Rx : 7E0 {recmsg}'
+                df.loc[len(df.index)] = f'Rx : 7E0 {recmsg}'#
                 proc_rx(recmsg)
         except:
-            print("no longer reading messages")
+            print("no messages")
     print("receive thread is stopped")
 
 def proc_rx(recmsg):
@@ -103,63 +104,107 @@ def unlock_using_token(dll):
     print(key)
     tx(f'2762{key}')
 
+def check_channel():
+    global df
+    for i in range(3):
+        try:
+            # open channel (only 1 channel on the kvaser)
+            ch_a = canlib.openChannel(channel=kvaser_channel)
+            # set bus parameters
+            ch_a.setBusParams(canlib.canBITRATE_500K)
+            # activate CAN chip
+            ch_a.busOn()
+            print(f'Channel {kvaser_channel} is ON.')
+            channel = True
+            break
+        except:
+            channel = False
+            print(f'Channel {1} did NOT turn ON after try {i + 1}.')
+            time.sleep(3)
+    if not channel:
+        df.loc[len(df.index)] = "Err : 00000000000 Cannot_communicate_with_Kvaser"
+        write_log(1)
+
 def check_comm():
-    comm = False
     tries = 0
-    while comm & tries==3:
+    for x in range(3):
         tx('3e00')
-        if response() == '7e000000000000':
-            print("Response Received")
-        time.sleep()
+        tp_resp = response()[2:6]
+        if tp_resp == '7e00':
+            print("Unit is communicating.")
+            comm = True
+            break
+        else:
+            print("No TP ping")
+            comm = False
+        time.sleep(1)
+        tries = tries+1
+    if not comm:
+        df.loc[len(df.index)] = "Err : 00000000000 Cannot_communicate_with_ECU"
+        write_log(2)
+
+def write_log():
+    global df
+
+
 
 #################################################################################################
 ##################################### SCRIPT BEGINS HERE ########################################
 #################################################################################################
 
+###################################### DEFINE VARIABLES #########################################
+
+######################################## CHECK CHANNEL ##########################################
+
 column_names = ['Messages']
 df = pd.DataFrame(columns = column_names)
 
 #initialize variables
-eor = False #end of reception
-conf = False #flow control confirmed
-
-for i in range(3):
-    try:
-        # open channel (only 1 channel on the kvaser)
-        ch_a = canlib.openChannel(channel=kvaser_channel)
-        # set bus parameters
-        ch_a.setBusParams(canlib.canBITRATE_500K)
-        # activate CAN chip
-        ch_a.busOn()
-        print(f'Channel {kvaser_channel} is ON.')
-        break
-    except:
-        print(f'Channel {1} did NOT turn ON after try {i + 1}.')
-        channel_flag = False
-        time.sleep(3)
+eor = False # end of reception
+conf = False # flow control confirmed
 
 end_rx = threading.Event()  #recd
 can_rx = threading.Thread(target=rx_uds) #thread for receiving messages only
 can_rx.start()
 rx_frame = []
 
-#Now make sure that the unit is communicating...
+####################################### CHECK Readiness #########################################
+
 check_comm()
+
 #################################################################################################
 ################################## TRANSMISSIONS BEGINS HERE ####################################
 #################################################################################################
 
-#First check if unit is communicating...
-tx('1003')
-print("Response", response())
-time.sleep(1)
-tx('3e00')
-print("Response", response())
-time.sleep(1)
-tx('1002')
-print("Response", response())
-time.sleep(1)
-unlock_using_token(1)
+if channel & comm:
+    tx('1003')
+    print("Response", response())
+    time.sleep(.25)
+    tx('3e00')
+    print("Response", response())
+    time.sleep(.25)
+    tx('23147001ad5101')
+    print("Response", response())
+    time.sleep(.25)
+    tx('23147001abec01')
+    print("Day", response()[4:6])
+    time.sleep(.25)
+    tx('23147001ad7a01')
+    print("Month", response()[4:6])
+    time.sleep(.25)
+    tx('23147001ac0d01')
+    print("Shift", response()[4:6])
+    time.sleep(.25)
+    tx('23147001aaa202')
+    print("Year", response()[4:8])
+    time.sleep(.25)
+    tx('1003')
+    print("Response", response())
+    time.sleep(.25)
+    tx('3e00')
+    print("Response", response())
+    time.sleep(.25)
+    unlock_using_token(1)
 
 time.sleep(3) #you want a pause after the last confirmation...
 
